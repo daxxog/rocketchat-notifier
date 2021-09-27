@@ -1,0 +1,37 @@
+# vi:syntax=dockerfile
+FROM python:__PYTHON_VERSION__-bullseye
+
+# upgrade debian packages
+ENV DEBIAN_FRONTEND="noninteractive"
+RUN apt update
+RUN apt install apt-utils -y
+RUN apt upgrade -y
+
+# non-root user
+RUN useradd -u 1001 nonroot
+RUN mkdir -p /home/nonroot
+RUN mkdir -p /usr/src
+RUN chown -R nonroot /home/nonroot
+RUN chown -R nonroot /usr/src
+USER 1001
+
+# install the python dependencies
+WORKDIR /usr/src
+COPY ./requirements.txt /usr/src
+RUN python3 -m pip install -r requirements.txt
+
+# install the script
+USER 0
+WORKDIR /usr/src/script
+COPY ./notify.py .
+RUN chmod +x ./notify.py
+
+# clean up apt
+RUN rm -rf /var/lib/apt/lists/*
+
+# clean up permissions
+RUN chown -R nonroot /usr/src
+USER 1001
+
+# set entrypoint
+ENTRYPOINT ["/usr/src/script/notify.py"]
